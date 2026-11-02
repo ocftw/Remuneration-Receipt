@@ -4,7 +4,7 @@ const ids=[...html.matchAll(/id="([^"]+)"/g)].map(x=>x[1]),elements=Object.fromE
 assert.equal(ids.length,new Set(ids).size);
 for(const match of js.matchAll(/(?:\$|value|cell)\('([^']+)'\)/g))assert.ok(elements[match[1]],'Missing field '+match[1]);
 let selected='9A90';elements.form.querySelector=()=>({value:selected});
-Object.assign(elements.resident,{value:'local'});elements.date.value='2026-10-07';elements.health.value='normal';
+Object.assign(elements.resident,{value:'local'});elements.health.value='normal';
 for(const [id,value] of Object.entries({bank:'銀行測試／808',branch:'分行測試／0123',account:'001234567890',accountName:'測試戶名<&>',payment:'銀行匯款'}))elements[id].value=value;
 const context=vm.createContext({document:{getElementById:id=>elements[id]},Intl,LaborRules:require('../docs/rules.js')});vm.runInContext(js.slice(0,js.indexOf('function update()')),context);
 const identityLabels=['本國籍','外國籍（在台滿183天）','外國籍（在台未滿183天）'];
@@ -40,3 +40,12 @@ assert.throws(()=>manual(30000,1.5,0));
 assert.throws(()=>manual(30000,NaN,0));
 console.log('Custom report label is escaped; manual deductions and net pay print correctly; invalid deductions are rejected.');
 console.log('Three identity mappings, all six report types, four bank fields (filled and blank), and escaped document output verified.');
+
+elements.signedDate.value='';
+let dateDoc=vm.runInContext('buildDocument({gross:30000,tax:0,health:633,net:29367,rate:0})',context);
+assert.ok(dateDoc.includes('日期：民國 ＿＿＿年＿＿月＿＿日'));
+elements.signedDate.value='2027-01-05';
+dateDoc=vm.runInContext('buildDocument({gross:30000,tax:0,health:633,net:29367,rate:0})',context);
+assert.ok(dateDoc.includes('日期：民國 116 年 1 月 5 日'));
+assert.ok(!dateDoc.includes('給付日期'));
+console.log('Payment and signature dates are independent; blank signature dates retain handwriting space.');
